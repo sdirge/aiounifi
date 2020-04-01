@@ -20,13 +20,18 @@ STATE_STOPPED = "stopped"
 class WSClient:
     """Websocket transport, session handling, message generation."""
 
-    def __init__(self, session, host, port, ssl_context, callback):
+    def __init__(
+        self, session, host, port, ssl_context, callback, is_unifi_os=False,
+    ):
         """Create resources for websocket communication."""
         self.session = session
-        self.host = host
-        self.port = port
         self.ssl_context = ssl_context
         self.session_handler_callback = callback
+
+        if not is_unifi_os:
+            self.url = f"wss://{host}:{port}/wss/s/default/events"
+        else:
+            self.url = f"wss://{host}:{port}/proxy/network/wss/s/default/events"
 
         self._loop = asyncio.get_running_loop()
 
@@ -60,11 +65,9 @@ class WSClient:
 
     async def running(self):
         """Start websocket connection."""
-        url = f"wss://{self.host}:{self.port}/wss/s/default/events"
-
         try:
             async with self.session.ws_connect(
-                url, ssl=self.ssl_context, heartbeat=15
+                self.url, ssl=self.ssl_context, heartbeat=15
             ) as ws:
                 self.state = STATE_RUNNING
 
